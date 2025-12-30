@@ -4,6 +4,7 @@ import { renderRss2 } from '../../utils/util';
 
 let deal = async (ctx) => {
 	const { uid } = ctx.req.param();
+	const cookie = ctx.env?.WEIBO_COOKIE;
 	let displayVideo = '1';
 	let displayArticle = '0';
 	let displayComments = '0';
@@ -13,8 +14,13 @@ let deal = async (ctx) => {
 			Referer: `https://m.weibo.cn/u/${uid}`,
 			'MWeibo-Pwa': 1,
 			'X-Requested-With': 'XMLHttpRequest',
+			Cookie: cookie,
 		},
 	}).then((res) => res.json());
+
+	if (!containerData.ok || !containerData.data) {
+		throw new Error('User not found or Weibo API error');
+	}
 
 	const name = containerData.data.userInfo.screen_name;
 	const description = containerData.data.userInfo.description;
@@ -26,6 +32,7 @@ let deal = async (ctx) => {
 			Referer: `https://m.weibo.cn/u/${uid}`,
 			'MWeibo-Pwa': 1,
 			'X-Requested-With': 'XMLHttpRequest',
+			Cookie: cookie,
 		},
 	})
 		.then((res) => res.json())
@@ -40,7 +47,7 @@ let deal = async (ctx) => {
 				// TODO: getShowData() on demand? The API seems to return most things we need since 2022/05/21.
 				//       Need more investigation, pending for now since the current version works fine.
 				// const data = await ctx.cache.tryGet(key, () => weiboUtils.getShowData(uid, item.mblog.bid));
-				const data = await weiboUtils.getShowData(uid, item.mblog.bid);
+				const data = await weiboUtils.getShowData(uid, item.mblog.bid, cookie);
 
 				if (data && data.text) {
 					item.mblog.text = data.text;
@@ -60,7 +67,7 @@ let deal = async (ctx) => {
 					// const retweetData = await ctx.cache.tryGet(`weibo:retweeted:${retweet.user.id}:${retweet.bid}`, () =>
 					// 	weiboUtils.getShowData(retweet.user.id, retweet.bid)
 					// );
-					const retweetData = await weiboUtils.getShowData(retweet.user.id, retweet.bid);
+					const retweetData = await weiboUtils.getShowData(retweet.user.id, retweet.bid, cookie);
 					if (retweetData !== undefined && retweetData.text) {
 						item.mblog.retweeted_status.text = retweetData.text;
 					}

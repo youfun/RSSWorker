@@ -246,16 +246,20 @@ const weiboUtils = {
 
 		return { description: html, title, link, guid, author, pubDate };
 	},
-	getShowData: async (uid, bid) => {
+	getShowData: async (uid, bid, cookie) => {
 		const link = `https://m.weibo.cn/statuses/show?id=${bid}`;
+		const headers = {
+			Referer: `https://m.weibo.cn/u/${uid}`,
+			'MWeibo-Pwa': 1,
+			'X-Requested-With': 'XMLHttpRequest',
+			'User-Agent':
+				'Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1',
+		};
+		if (cookie) {
+			headers.Cookie = cookie;
+		}
 		const itemResponse = await fetch(link, {
-			headers: {
-				Referer: `https://m.weibo.cn/u/${uid}`,
-				'MWeibo-Pwa': 1,
-				'X-Requested-With': 'XMLHttpRequest',
-				'User-Agent':
-					'Mozilla/5.0 (iPhone; CPU iPhone OS 11_0 like Mac OS X) AppleWebKit/604.1.38 (KHTML, like Gecko) Version/11.0 Mobile/15A372 Safari/604.1',
-			},
+			headers,
 		}).then((res) => res.json());
 		return itemResponse.data.data;
 	},
