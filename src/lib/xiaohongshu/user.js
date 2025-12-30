@@ -1,10 +1,24 @@
 import { renderRss2 } from '../../utils/util';
 
-let getUser = async (url) => {
+let getUser = async (url, cookie) => {
+	const headers = {
+		"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+		"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+		"Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+		"Sec-Ch-Ua": '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+		"Sec-Ch-Ua-Mobile": "?0",
+		"Sec-Ch-Ua-Platform": '"Windows"',
+		"Sec-Fetch-Dest": "document",
+		"Sec-Fetch-Mode": "navigate",
+		"Sec-Fetch-Site": "none",
+		"Sec-Fetch-User": "?1",
+		"Upgrade-Insecure-Requests": "1"
+	};
+	if (cookie) {
+		headers['Cookie'] = cookie;
+	}
 	let res = await fetch(url, {
-		headers: {
-			"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-		}
+		headers: headers
 	});
 	let scripts = [];
 	let rewriter = new HTMLRewriter()
@@ -19,6 +33,9 @@ let getUser = async (url) => {
 		.transform(res);
 	await rewriter.text();
 	let script = scripts.find((script) => script.startsWith('window.__INITIAL_STATE__='));
+	if (!script) {
+		throw new Error('Could not find initial state script. Possible captcha or login required.');
+	}
 	script = script.slice('window.__INITIAL_STATE__='.length);
 	// replace undefined to null
 	script = script.replace(/undefined/g, 'null');
@@ -30,6 +47,7 @@ let deal = async (ctx) => {
 	// const uid = ctx.params.user_id;
 	// const category = ctx.params.category;
 	const { uid } = ctx.req.param();
+	const cookie = ctx.env?.XIAOHONGSHU_COOKIE;
 	const category = 'notes';
 	const url = `https://www.xiaohongshu.com/user/profile/${uid}`;
 
@@ -37,7 +55,7 @@ let deal = async (ctx) => {
 		userPageData: { basicInfo, interactions, tags },
 		notes,
 		collect,
-	} = await getUser(url);
+	} = await getUser(url, cookie);
 
 	const title = `${basicInfo.nickname} - ${category === 'notes' ? '笔记' : '收藏'} • 小红书 / RED`;
 	const description = `${basicInfo.desc} ${tags.map((t) => t.name).join(' ')} ${interactions.map((i) => `${i.count} ${i.name}`).join(' ')}`;
